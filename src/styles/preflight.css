@@ -1,0 +1,70 @@
+*,
+::before,
+::after {
+  border: inherit;
+  border-width: 0;
+  border-style: solid;
+  border-color: theme("borderColor.DEFAULT", currentColor);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+  border: inherit;
+  background-color: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+img,
+video {
+  height: auto;
+  max-width: 100%;
+}
+
+img,
+svg,
+video,
+canvas,
+audio,
+iframe,
+embed,
+object {
+  display: block;
+  /* vertical-align: middle; */
+}
+
+ol,
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+dl,
+dd,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+hr,
+p,
+pre,
+figure,
+blockquote {
+  margin: 0;
+}
