@@ -1,7 +1,10 @@
 "use client"
 
 import { useState, type FormEvent } from "react"
+import { Route } from "next"
 import Image from "next/image"
+import { useRouter } from "next/navigation"
+import { useLoginMutation } from "@/redux/apis/auth"
 import { formatErrorZodMessage, parseError } from "@/utils/error"
 import { LoadingButton } from "@mui/lab"
 import { Box, Stack, TextField, Typography } from "@mui/material"
@@ -25,9 +28,19 @@ type FormError = LoginFormSchema & {
   request?: string
 }
 
-export default function AuthLayout() {
+interface PageProps {
+  searchParams: {
+    _next: string
+  }
+}
+
+export default function Auth({ searchParams }: PageProps) {
   const [form, setForm] = useState<LoginFormSchema>(initialForm)
   const [errors, setErrors] = useState<FormError | null>(null)
+
+  const { replace } = useRouter()
+
+  const [login, { isLoading }] = useLoginMutation()
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -45,7 +58,23 @@ export default function AuthLayout() {
     }
 
     try {
-      // send request.
+      const user = await login(response.data).unwrap()
+
+      if (!user.isAdmin) {
+        setErrors(
+          (prev) =>
+            ({
+              ...prev,
+              request: "You do not have permission to access this platform",
+            }) as FormError
+        )
+
+        return
+      }
+
+      const nextLink = searchParams._next as Route
+
+      replace(nextLink ?? "/app")
     } catch (error) {
       setErrors(
         (prev) => ({ ...prev, request: parseError(error) }) as FormError
@@ -144,11 +173,11 @@ export default function AuthLayout() {
             helperText={errors?.password}
           />
 
-          <LoadingButton sx={{ mt: 4.5 }} type="submit">
+          <LoadingButton sx={{ mt: 4.5 }} type="submit" loading={isLoading}>
             Sign In
           </LoadingButton>
 
-          {errors && errors.request && (
+          {errors?.request && (
             <Typography
               sx={{ mt: 1.5, color: "red.500", textAlign: "center" }}
               variant="body2"
