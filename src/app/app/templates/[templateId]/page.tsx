@@ -53,7 +53,7 @@ export default function Page({ params }: PageParams) {
   const [currCanvas, setCurrCanvas] = useState(0)
   const [selectedElements, setSelectedElements] = useState<FabricObject[]>([])
 
-  const isCreate = params.templateId === "create"
+  const isCreatePage = params.templateId === "create"
 
   const selectedCanvas = canvas[currCanvas]
 
@@ -68,9 +68,9 @@ export default function Page({ params }: PageParams) {
   }
 
   function onClearAll() {
-    selectedCanvas
-      .getObjects()
-      .forEach((object) => selectedCanvas.remove(object))
+    for (const object of selectedCanvas.getObjects())
+      selectedCanvas.remove(object)
+
     selectedCanvas.discardActiveObject()
     selectedCanvas.renderAll()
   }
@@ -118,9 +118,9 @@ export default function Page({ params }: PageParams) {
   }
 
   function onSendToBack() {
-    selectedCanvas
-      .getActiveObjects()
-      .forEach((object) => selectedCanvas.sendObjectToBack(object))
+    for (const object of selectedCanvas.getActiveObjects())
+      selectedCanvas.sendObjectToBack(object)
+
     selectedCanvas.discardActiveObject()
     selectedCanvas.renderAll()
   }
@@ -139,9 +139,9 @@ export default function Page({ params }: PageParams) {
   }
 
   const onDeleteElement = useCallback(() => {
-    selectedCanvas
-      .getActiveObjects()
-      .forEach((object) => selectedCanvas.remove(object))
+    for (const object of selectedCanvas.getActiveObjects())
+      selectedCanvas.remove(object)
+
     selectedCanvas.discardActiveObject()
     selectedCanvas.renderAll()
   }, [selectedCanvas])
@@ -214,14 +214,16 @@ export default function Page({ params }: PageParams) {
   }
 
   useEffect(() => {
-    if (canvas.length > 0 && !isCreate) {
+    if (canvas.length > 0 && !isCreatePage) {
       const run = async () => {
         const templates = JSON.parse(JSON.stringify(dumpTemplate)) as Record<
           string,
           string
         >
 
-        Object.entries(templates).forEach(async ([key, value]) => {
+        const listTemplates = Object.entries(templates)
+
+        for await (const [key, value] of listTemplates) {
           const selectedCanvas = canvas[Number(key)]
 
           await selectedCanvas.loadFromJSON(value)
@@ -236,19 +238,28 @@ export default function Page({ params }: PageParams) {
           })
 
           selectedCanvas.renderAll()
-        })
+        }
       }
 
       run()
     }
-  }, [canvas, isCreate])
+  }, [canvas, isCreatePage])
+
+  useEffect(() => {
+    if (!isCreatePage && selectedElements.length > 0) {
+      for (const object of selectedElements) {
+        if (object instanceof FabricImage)
+          object.setSrc(
+            "https://images.unsplash.com/photo-1605146769289-440113cc3d00"
+          )
+      }
+    }
+  }, [isCreatePage, selectedElements])
 
   useEffect(() => {
     function keyboard({ key }: KeyboardEvent) {
-      if (selectedElements.length > 0) return
-
       if (key === "Escape") selectedCanvas.discardActiveObject()
-      if (key === "Backspace") onDeleteElement()
+      if (key === "Backspace" && selectedElements.length <= 0) onDeleteElement()
 
       selectedCanvas.renderAll()
     }
@@ -274,7 +285,7 @@ export default function Page({ params }: PageParams) {
         crossOrigin="anonymous"
       />
 
-      {isCreate && (
+      {isCreatePage && (
         <Stack
           sx={{
             mb: 5,
@@ -505,7 +516,7 @@ export default function Page({ params }: PageParams) {
       >
         <Button onClick={onExportToPDF}>Export to PDF</Button>
 
-        {isCreate && <Button onClick={saveToJSON}>Save</Button>}
+        {isCreatePage && <Button onClick={saveToJSON}>Save</Button>}
       </Stack>
 
       {json && (
