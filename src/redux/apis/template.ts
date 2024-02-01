@@ -49,7 +49,7 @@ export const templateApi = createApi({
       }),
       invalidatesTags: ["Templates"],
     }),
-    deleteTemplate: builder.mutation<ITemplate, { id: string }>({
+    deleteTemplate: builder.mutation<IBaseResponse, { id: string }>({
       query: ({ id }) => ({
         url: `/${id}`,
         method: "DELETE",

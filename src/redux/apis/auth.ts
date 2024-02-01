@@ -4,10 +4,6 @@ import type { IUser } from "@/types/user.types"
 
 import { fetchAuthQuery } from "../fetch-auth-query"
 
-export interface IBaseResponse {
-  msg: string
-}
-
 interface ILoginRequest {
   username: string
   password: string

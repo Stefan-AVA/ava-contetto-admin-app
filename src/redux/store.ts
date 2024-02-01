@@ -9,6 +9,7 @@ import {
 import { authApi } from "./apis/auth"
 import { orgApi } from "./apis/org"
 import { templateApi } from "./apis/template"
+import { templateImageApi } from "./apis/templateImage"
 import appReducer from "./slices/app"
 
 export const store = configureStore({
@@ -17,12 +18,14 @@ export const store = configureStore({
     [authApi.reducerPath]: authApi.reducer,
     [orgApi.reducerPath]: orgApi.reducer,
     [templateApi.reducerPath]: templateApi.reducer,
+    [templateImageApi.reducerPath]: templateImageApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
       authApi.middleware,
       orgApi.middleware,
-      templateApi.middleware
+      templateApi.middleware,
+      templateImageApi.middleware
     ),
 })
 
