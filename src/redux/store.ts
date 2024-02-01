@@ -7,15 +7,23 @@ import {
 } from "react-redux"
 
 import { authApi } from "./apis/auth"
+import { orgApi } from "./apis/org"
+import { templateApi } from "./apis/template"
 import appReducer from "./slices/app"
 
 export const store = configureStore({
   reducer: {
     app: appReducer,
     [authApi.reducerPath]: authApi.reducer,
+    [orgApi.reducerPath]: orgApi.reducer,
+    [templateApi.reducerPath]: templateApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware().concat(authApi.middleware),
+    getDefaultMiddleware().concat(
+      authApi.middleware,
+      orgApi.middleware,
+      templateApi.middleware
+    ),
 })
 
 setupListeners(store.dispatch)

@@ -15,7 +15,7 @@ interface ILoginRequest {
 
 export const authApi = createApi({
   reducerPath: "authApi",
-  baseQuery: fetchAuthQuery({ baseUrl: "/auth" }),
+  baseQuery: fetchAuthQuery({ baseUrl: "/admin" }),
   endpoints: (builder) => ({
     login: builder.mutation<IUser, ILoginRequest>({
       query: (data) => ({
