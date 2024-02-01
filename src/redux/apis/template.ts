@@ -13,7 +13,10 @@ export const templateApi = createApi({
   baseQuery: fetchAuthQuery({ baseUrl: "/admin/templates" }),
   tagTypes: ["Templates"],
   endpoints: (builder) => ({
-    createTemplate: builder.mutation<ITemplate, Omit<ITemplate, "_id">>({
+    createTemplate: builder.mutation<
+      ITemplate,
+      Omit<ITemplate, "_id" | "createdAt" | "updatedAt">
+    >({
       query: (data) => ({
         url: "",
         method: "POST",
@@ -35,7 +38,10 @@ export const templateApi = createApi({
       }),
       providesTags: ["Templates"],
     }),
-    updateTemplate: builder.mutation<ITemplate, ITemplate>({
+    updateTemplate: builder.mutation<
+      ITemplate,
+      Omit<ITemplate, "createdAt" | "updatedAt">
+    >({
       query: ({ _id, ...rest }) => ({
         url: `/${_id}`,
         method: "PUT",
