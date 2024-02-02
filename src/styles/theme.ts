@@ -1,4 +1,5 @@
 import type {} from "@mui/lab/themeAugmentation"
+import type {} from "@mui/x-data-grid/themeAugmentation"
 
 import colorMapper from "@/utils/color-mapper"
 import {
@@ -148,7 +149,7 @@ export const components = (
       },
 
       sizeMedium: {
-        height: "3.5rem",
+        height: "3rem",
         padding: ".75rem 1.5rem",
       },
 
@@ -241,6 +242,16 @@ export const components = (
 
       colorPrimary: {
         color: colors.white,
+      },
+    },
+  },
+
+  MuiDataGrid: {
+    styleOverrides: {
+      cell: {
+        ".MuiIconButton-colorPrimary": {
+          color: colors.gray[600],
+        },
       },
     },
   },
