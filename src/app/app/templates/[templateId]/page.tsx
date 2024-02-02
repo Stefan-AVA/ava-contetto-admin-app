@@ -99,7 +99,7 @@ export default function Page({ params }: PageParams) {
       id: params.templateId,
     },
     {
-      skip: !params.templateId,
+      skip: isCreatePage || !params.templateId,
     }
   )
 
@@ -119,7 +119,7 @@ export default function Page({ params }: PageParams) {
     })
 
     const fields = {
-      data: JSON.stringify(data),
+      data,
       ...form,
       price: form.price ? masks.clear(form.price) / 100 : 0,
       orgIds: form.orgIds.map(({ _id }) => _id),
@@ -302,7 +302,7 @@ export default function Page({ params }: PageParams) {
           isPublic: template.isPublic,
         }))
 
-        const templates = JSON.parse(template.data) as Record<string, string>
+        const templates = template.data as Record<string, string>
 
         const listTemplates = Object.entries(templates)
 
@@ -439,7 +439,7 @@ export default function Page({ params }: PageParams) {
           label="Public"
         />
 
-        {form.isPublic && (
+        {!form.isPublic && (
           <Autocomplete
             value={form.orgIds}
             options={orgs ?? []}

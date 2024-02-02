@@ -43,8 +43,8 @@ export default function FabricCanvas({
 
   useEffect(() => {
     const options: Partial<CanvasOptions> = {
-      width: matches ? 1000 : width - 160,
-      height: 800,
+      width: matches ? 840 : width - 160,
+      height: matches ? 1188 : 400,
     }
 
     const bindEvents = (canvas: Canvas) => {
