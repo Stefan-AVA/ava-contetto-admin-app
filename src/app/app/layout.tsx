@@ -54,7 +54,7 @@ export default function Layout({ children }: PropsWithChildren) {
     <Box sx={{ display: "flex" }}>
       <Sidebar />
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+      <Box component="main" sx={{ width: "100%", p: 3 }}>
         {children}
       </Box>
     </Box>

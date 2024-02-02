@@ -1,12 +1,32 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { startTransition, useCallback, useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useGetOrgsQuery } from "@/redux/apis/org"
 import {
+  useCreateTemplateMutation,
+  useGetTemplateQuery,
+  useUpdateTemplateMutation,
+} from "@/redux/apis/template"
+import { parseError } from "@/utils/error"
+import { nameInitials } from "@/utils/format-name"
+import masks from "@/utils/masks"
+import { LoadingButton } from "@mui/lab"
+import {
+  Autocomplete,
+  Avatar,
   Box,
   Button,
   Container,
+  Divider,
+  FormControlLabel,
+  InputAdornment,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
   MenuItem,
   Stack,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material"
@@ -20,7 +40,10 @@ import {
 } from "fabric"
 import PDF from "jspdf"
 import { MuiColorInput } from "mui-color-input"
+import { useSnackbar } from "notistack"
 
+import { TemplateType } from "@/types/template.types"
+import Loading from "@/components/loading"
 import { dmsans } from "@/styles/fonts"
 
 import FabricCanvas from "./fabric-canvas"
@@ -29,6 +52,11 @@ interface PageParams {
   params: {
     templateId: string
   }
+}
+
+interface Option {
+  _id: string
+  name: string
 }
 
 const initialStyle = {
@@ -42,29 +70,78 @@ const initialStyle = {
   backgroundColor: "#000",
 }
 
-const dumpTemplate = {
-  0: `{ "version": "6.0.0-beta17", "objects": [ { "rx": 0, "ry": 0, "type": "Rect", "version": "6.0.0-beta17", "originX": "left", "originY": "top", "left": 0, "top": 0, "width": 40, "height": 40, "fill": "#000", "stroke": "#000", "strokeWidth": 1, "strokeDashArray": null, "strokeLineCap": "butt", "strokeDashOffset": 0, "strokeLineJoin": "miter", "strokeUniform": false, "strokeMiterLimit": 4, "scaleX": 16.2104, "scaleY": 16.2104, "angle": 0, "flipX": false, "flipY": false, "opacity": 1, "shadow": null, "visible": true, "backgroundColor": "", "fillRule": "nonzero", "paintFirst": "fill", "globalCompositeOperation": "source-over", "skewX": 0, "skewY": 0 }, { "rx": 0, "ry": 0, "type": "Rect", "version": "6.0.0-beta17", "originX": "left", "originY": "top", "left": -60.591, "top": 405.1052, "width": 40, "height": 40, "fill": "#2d43b8", "stroke": "#2d43b8", "strokeWidth": 1, "strokeDashArray": null, "strokeLineCap": "butt", "strokeDashOffset": 0, "strokeLineJoin": "miter", "strokeUniform": false, "strokeMiterLimit": 4, "scaleX": 20.3902, "scaleY": 3.4853, "angle": 353.4102, "flipX": false, "flipY": false, "opacity": 1, "shadow": null, "visible": true, "backgroundColor": "", "fillRule": "nonzero", "paintFirst": "fill", "globalCompositeOperation": "source-over", "skewX": 0, "skewY": 0 }, { "fontSize": 32, "fontWeight": "400", "fontFamily": "'__DM_Sans_88fdc4', '__DM_Sans_Fallback_88fdc4'", "fontStyle": "normal", "lineHeight": 2, "text": "Hello world", "charSpacing": 0, "textAlign": "center", "styles": [], "pathStartOffset": 0, "pathSide": "left", "pathAlign": "baseline", "underline": false, "overline": false, "linethrough": false, "textBackgroundColor": "", "direction": "ltr", "minWidth": 20, "splitByGrapheme": false, "type": "Textbox", "version": "6.0.0-beta17", "originX": "left", "originY": "top", "left": 33.8807, "top": 448.2357, "width": 579, "height": 36.16, "fill": "#ffffff", "stroke": null, "strokeWidth": 1, "strokeDashArray": null, "strokeLineCap": "butt", "strokeDashOffset": 0, "strokeLineJoin": "miter", "strokeUniform": false, "strokeMiterLimit": 4, "scaleX": 1, "scaleY": 1, "angle": 353.3482, "flipX": false, "flipY": false, "opacity": 1, "shadow": null, "visible": true, "backgroundColor": "", "fillRule": "nonzero", "paintFirst": "fill", "globalCompositeOperation": "source-over", "skewX": 0, "skewY": 0 } ], "background": "#FFF" }`,
+const initialForm = {
+  name: "",
+  type: "" as TemplateType,
+  price: "",
+  orgIds: [] as Option[],
+  isPublic: false,
 }
 
 export default function Page({ params }: PageParams) {
-  const [json, setJson] = useState("")
+  const [form, setForm] = useState(initialForm)
   const [style, setStyle] = useState(initialStyle)
   const [canvas, setCanvas] = useState<Canvas[]>([])
   const [currCanvas, setCurrCanvas] = useState(0)
+  const [numberOfPages, setNumberOfPages] = useState(1)
   const [selectedElements, setSelectedElements] = useState<FabricObject[]>([])
 
   const isCreatePage = params.templateId === "create"
 
+  const { back } = useRouter()
+
+  const { enqueueSnackbar } = useSnackbar()
+
   const selectedCanvas = canvas[currCanvas]
 
-  function saveToJSON() {
+  const { data: template, isLoading: isLoadingTemplate } = useGetTemplateQuery(
+    {
+      id: params.templateId,
+    },
+    {
+      skip: !params.templateId,
+    }
+  )
+
+  const { data: orgs, isLoading: isLoadingOrgs } = useGetOrgsQuery()
+
+  const [updateTemplate, { isLoading: isLoadingUpdateTemplate }] =
+    useUpdateTemplateMutation()
+
+  const [createTemplate, { isLoading: isLoadingCreateTemplate }] =
+    useCreateTemplateMutation()
+
+  async function onSubmit() {
     const data = {} as Record<string, string>
 
     canvas.forEach((curr, index) => {
       data[index] = curr.toJSON()
     })
 
-    setJson(JSON.stringify(data))
+    const fields = {
+      data: JSON.stringify(data),
+      ...form,
+      price: form.price ? masks.clear(form.price) / 100 : 0,
+      orgIds: form.orgIds.map(({ _id }) => _id),
+    }
+
+    await (
+      isCreatePage
+        ? createTemplate(fields)
+        : updateTemplate({ _id: params.templateId, ...fields })
+    )
+      .unwrap()
+      .then(() => {
+        enqueueSnackbar(
+          `Template ${isCreatePage ? "created" : "updated"} successfully`,
+          { variant: "success" }
+        )
+
+        back()
+      })
+      .catch((error) =>
+        enqueueSnackbar(parseError(error), { variant: "error" })
+      )
   }
 
   function onClearAll() {
@@ -214,14 +291,22 @@ export default function Page({ params }: PageParams) {
   }
 
   useEffect(() => {
-    if (canvas.length > 0 && !isCreatePage) {
+    if (orgs && template && canvas.length > 0) {
       const run = async () => {
-        const templates = JSON.parse(JSON.stringify(dumpTemplate)) as Record<
-          string,
-          string
-        >
+        setForm((prev) => ({
+          ...prev,
+          name: template.name,
+          type: template.type,
+          price: masks.transformToCurrency(template.price),
+          orgIds: orgs.filter(({ _id }) => template.orgIds.includes(_id)),
+          isPublic: template.isPublic,
+        }))
+
+        const templates = JSON.parse(template.data) as Record<string, string>
 
         const listTemplates = Object.entries(templates)
+
+        startTransition(() => setNumberOfPages(listTemplates.length))
 
         for await (const [key, value] of listTemplates) {
           const selectedCanvas = canvas[Number(key)]
@@ -243,18 +328,18 @@ export default function Page({ params }: PageParams) {
 
       run()
     }
-  }, [canvas, isCreatePage])
+  }, [orgs, canvas, template])
 
-  useEffect(() => {
-    if (!isCreatePage && selectedElements.length > 0) {
-      for (const object of selectedElements) {
-        if (object instanceof FabricImage)
-          object.setSrc(
-            "https://images.unsplash.com/photo-1605146769289-440113cc3d00"
-          )
-      }
-    }
-  }, [isCreatePage, selectedElements])
+  // useEffect(() => {
+  //   if (!isCreatePage && selectedElements.length > 0) {
+  //     for (const object of selectedElements) {
+  //       if (object instanceof FabricImage)
+  //         object.setSrc(
+  //           "https://images.unsplash.com/photo-1605146769289-440113cc3d00"
+  //         )
+  //     }
+  //   }
+  // }, [isCreatePage, selectedElements])
 
   useEffect(() => {
     function keyboard({ key }: KeyboardEvent) {
@@ -271,6 +356,8 @@ export default function Page({ params }: PageParams) {
     }
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
+  if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs)) return <Loading />
+
   return (
     <Container
       sx={{
@@ -279,103 +366,208 @@ export default function Page({ params }: PageParams) {
         flexDirection: "column",
       }}
     >
+      <Stack
+        sx={{
+          mb: 4,
+          alignItems: "center",
+          flexDirection: "row",
+          justifyContent: "space-between",
+        }}
+      >
+        <Typography sx={{ fontWeight: "700" }} variant="h4">
+          {isCreatePage ? "New Template" : "Edit Template"}
+        </Typography>
+
+        <Button onClick={() => setNumberOfPages((prev) => prev + 1)}>
+          Add page
+        </Button>
+      </Stack>
+
       <link
         rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Lato:wght@300;400;700&family=Nunito+Sans:opsz,wght@6..12,300;6..12,400;6..12,500;6..12,600;6..12,700&family=Open+Sans:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Raleway:wght@300;400;500;600;700&family=Roboto:wght@300;400;500;700&display=swap"
         crossOrigin="anonymous"
       />
 
-      {isCreatePage && (
-        <Stack
-          sx={{
-            mb: 5,
-            gap: {
-              xs: 1,
-              sm: 2,
-            },
-            flexWrap: "wrap",
-            alignItems: "center",
-            flexDirection: "row",
-          }}
+      <Stack sx={{ gap: 3, flexDirection: "row" }}>
+        <TextField
+          value={form.name}
+          label="Name"
+          onChange={({ target }) =>
+            setForm((prev) => ({ ...prev, name: target.value }))
+          }
+          fullWidth
+        />
+
+        <TextField
+          value={form.price}
+          label="Price"
+          onChange={({ target }) =>
+            setForm((prev) => ({
+              ...prev,
+              price: masks.currency(target.value),
+            }))
+          }
+          fullWidth
+        />
+
+        <TextField
+          label="Type"
+          value={form.type}
+          select
+          onChange={({ target }) =>
+            setForm((prev) => ({ ...prev, type: target.value as TemplateType }))
+          }
+          fullWidth
         >
-          <Button
-            sx={{ whiteSpace: "nowrap" }}
-            size="small"
-            onClick={onAddText}
-            variant="outlined"
-          >
-            Add text
-          </Button>
+          <MenuItem value="brochure">Brochure</MenuItem>
+          <MenuItem value="social">Social</MenuItem>
+          <MenuItem value="ads">Ads</MenuItem>
+        </TextField>
+      </Stack>
 
-          <Box sx={{ position: "relative" }}>
-            <Box
-              sx={{
-                width: "100%",
-                height: "100%",
-                zIndex: 99,
-                opacity: 0,
-                position: "absolute",
-              }}
-              type="file"
-              onChange={({ target }) => onAddImage(target.files)}
-              component="input"
+      <Stack sx={{ mt: 2, mb: 4, gap: 3, flexDirection: "row" }}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={form.isPublic}
+              onChange={({ target }) =>
+                setForm((prev) => ({ ...prev, isPublic: target.checked }))
+              }
             />
+          }
+          label="Public"
+        />
 
-            <Button
-              sx={{ whiteSpace: "nowrap" }}
-              size="small"
-              variant="outlined"
-            >
-              Add Image
-            </Button>
-          </Box>
+        {form.isPublic && (
+          <Autocomplete
+            value={form.orgIds}
+            options={orgs ?? []}
+            onChange={(_, newValue) =>
+              setForm((prev) => ({ ...prev, orgIds: newValue }))
+            }
+            multiple
+            fullWidth
+            clearOnBlur
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Search Orgs"
+                InputProps={{
+                  ...params.InputProps,
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      {params.InputProps.endAdornment}
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            )}
+            renderOption={({ key, ...props }: any, option) => (
+              <ListItem key={option._id} {...props}>
+                <ListItemAvatar>
+                  <Avatar alt={option.name}>{nameInitials(option.name)}</Avatar>
+                </ListItemAvatar>
 
-          <Button
-            sx={{ whiteSpace: "nowrap" }}
-            size="small"
-            onClick={onAddCircle}
-            variant="outlined"
-          >
-            Add circle
+                <ListItemText>{option.name}</ListItemText>
+              </ListItem>
+            )}
+            noOptionsText="No Orgs"
+            selectOnFocus
+            getOptionLabel={(option) => option.name}
+            handleHomeEndKeys
+          />
+        )}
+      </Stack>
+
+      <Divider />
+
+      <Stack
+        sx={{
+          mt: 4,
+          mb: 5,
+          gap: {
+            xs: 1,
+            sm: 2,
+          },
+          flexWrap: "wrap",
+          alignItems: "center",
+          flexDirection: "row",
+        }}
+      >
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={onAddText}
+          variant="outlined"
+        >
+          Add text
+        </Button>
+
+        <Box sx={{ position: "relative" }}>
+          <Box
+            sx={{
+              width: "100%",
+              height: "100%",
+              zIndex: 99,
+              opacity: 0,
+              position: "absolute",
+            }}
+            type="file"
+            onChange={({ target }) => onAddImage(target.files)}
+            component="input"
+          />
+
+          <Button sx={{ whiteSpace: "nowrap" }} size="small" variant="outlined">
+            Add Image
           </Button>
+        </Box>
 
-          <Button
-            sx={{ whiteSpace: "nowrap" }}
-            size="small"
-            onClick={onAddRectangle}
-            variant="outlined"
-          >
-            Add Rectangle
-          </Button>
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={onAddCircle}
+          variant="outlined"
+        >
+          Add circle
+        </Button>
 
-          <Button
-            sx={{ whiteSpace: "nowrap" }}
-            size="small"
-            onClick={onSendToBack}
-            variant="outlined"
-          >
-            Send to back
-          </Button>
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={onAddRectangle}
+          variant="outlined"
+        >
+          Add Rectangle
+        </Button>
 
-          <Button
-            sx={{ whiteSpace: "nowrap" }}
-            size="small"
-            onClick={onDeleteElement}
-            variant="outlined"
-          >
-            Delete element
-          </Button>
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={onSendToBack}
+          variant="outlined"
+        >
+          Send to back
+        </Button>
 
-          <Button
-            sx={{ whiteSpace: "nowrap" }}
-            size="small"
-            onClick={onClearAll}
-            variant="outlined"
-          >
-            Clear all
-          </Button>
-        </Stack>
-      )}
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={onDeleteElement}
+          variant="outlined"
+        >
+          Delete element
+        </Button>
+
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={onClearAll}
+          variant="outlined"
+        >
+          Clear all
+        </Button>
+      </Stack>
 
       <Stack
         sx={{
@@ -479,7 +671,6 @@ export default function Page({ params }: PageParams) {
           onChange={(value) =>
             onUpdateStylesAndCurrentElements("textColor", value)
           }
-          fullWidth
         />
 
         <MuiColorInput
@@ -489,7 +680,6 @@ export default function Page({ params }: PageParams) {
           onChange={(value) =>
             onUpdateStylesAndCurrentElements("backgroundColor", value)
           }
-          fullWidth
         />
 
         <MuiColorInput
@@ -499,7 +689,6 @@ export default function Page({ params }: PageParams) {
           onChange={(value) =>
             onUpdateStylesAndCurrentElements("borderColor", value)
           }
-          fullWidth
         />
       </Stack>
 
@@ -507,7 +696,7 @@ export default function Page({ params }: PageParams) {
         onCanvas={setCanvas}
         currCanvas={currCanvas}
         onCurrCanvas={setCurrCanvas}
-        numberOfPages={3}
+        numberOfPages={numberOfPages}
         onSelectedElements={setSelectedElements}
       />
 
@@ -516,16 +705,13 @@ export default function Page({ params }: PageParams) {
       >
         <Button onClick={onExportToPDF}>Export to PDF</Button>
 
-        {isCreatePage && <Button onClick={saveToJSON}>Save</Button>}
+        <LoadingButton
+          onClick={onSubmit}
+          loading={isLoadingCreateTemplate || isLoadingUpdateTemplate}
+        >
+          Save
+        </LoadingButton>
       </Stack>
-
-      {json && (
-        <Box sx={{ p: 4, mt: 2, bgcolor: "gray.200", borderRadius: 2 }}>
-          <Typography sx={{ wordBreak: "break-word" }}>
-            {JSON.stringify(json, undefined, 2)}
-          </Typography>
-        </Box>
-      )}
     </Container>
   )
 }
