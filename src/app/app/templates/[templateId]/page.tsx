@@ -15,7 +15,6 @@ import { LoadingButton } from "@mui/lab"
 import {
   Autocomplete,
   Avatar,
-  Box,
   Button,
   Container,
   Divider,
@@ -45,6 +44,7 @@ import { TemplateType } from "@/types/template.types"
 import Loading from "@/components/loading"
 import { dmsans } from "@/styles/fonts"
 
+import ChooseImage from "./choose-image"
 import FabricCanvas from "./fabric-canvas"
 
 interface PageParams {
@@ -83,6 +83,7 @@ export default function Page({ params }: PageParams) {
   const [canvas, setCanvas] = useState<Canvas[]>([])
   const [currCanvas, setCurrCanvas] = useState(0)
   const [numberOfPages, setNumberOfPages] = useState<number[]>([])
+  const [chooseImageModal, setChooseImageModal] = useState(false)
   const [selectedElements, setSelectedElements] = useState<FabricObject[]>([])
 
   const isCreatePage = params.templateId === "create"
@@ -175,16 +176,8 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.bringObjectToFront(circle)
   }
 
-  async function onAddImage(files: FileList | null) {
-    if (!files || (files && files.length <= 0)) return
-
-    const file = files[0]
-
-    // Send image to backend to register.
-
-    const path = URL.createObjectURL(file)
-
-    const image = await FabricImage.fromURL(path)
+  async function onAddImage(fileUrl: string) {
+    const image = await FabricImage.fromURL(fileUrl)
 
     selectedCanvas.add(image)
 
@@ -365,7 +358,7 @@ export default function Page({ params }: PageParams) {
           {isCreatePage ? "New Template" : "Edit Template"}
         </Typography>
 
-        <Button onClick={onAddNewPage}>Add page</Button>
+        {isCreatePage && <Button onClick={onAddNewPage}>Add page</Button>}
       </Stack>
 
       <link
@@ -489,24 +482,14 @@ export default function Page({ params }: PageParams) {
           Add text
         </Button>
 
-        <Box sx={{ position: "relative" }}>
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              zIndex: 99,
-              opacity: 0,
-              position: "absolute",
-            }}
-            type="file"
-            onChange={({ target }) => onAddImage(target.files)}
-            component="input"
-          />
-
-          <Button sx={{ whiteSpace: "nowrap" }} size="small" variant="outlined">
-            Add Image
-          </Button>
-        </Box>
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          variant="outlined"
+          onClick={() => setChooseImageModal(true)}
+        >
+          Add Image
+        </Button>
 
         <Button
           sx={{ whiteSpace: "nowrap" }}
@@ -698,6 +681,12 @@ export default function Page({ params }: PageParams) {
       >
         Save
       </LoadingButton>
+
+      <ChooseImage
+        open={chooseImageModal}
+        onClose={() => setChooseImageModal(false)}
+        onAddImage={onAddImage}
+      />
     </Container>
   )
 }
