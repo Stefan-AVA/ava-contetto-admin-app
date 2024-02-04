@@ -93,8 +93,6 @@ export default function Page({ params }: PageParams) {
 
   const selectedCanvas = canvas[currCanvas]
 
-  console.log({ canvas, currCanvas, selectedCanvas, numberOfPages })
-
   const { data: template, isLoading: isLoadingTemplate } = useGetTemplateQuery(
     {
       id: params.templateId,
@@ -295,8 +293,6 @@ export default function Page({ params }: PageParams) {
 
         for await (const [key, value] of templates.entries()) {
           const selectedCanvas = canvas[Number(key)]
-
-          console.log({ numberOfPages, canvas })
 
           await selectedCanvas.loadFromJSON(value)
 
