@@ -25,7 +25,7 @@ import Loading from "@/components/loading"
 interface ChooseImageProps {
   open: boolean
   onClose: () => void
-  onAddImage: (url: string) => void
+  onAddImage: (url: string) => Promise<void>
 }
 
 export default function ChooseImage({
@@ -54,7 +54,7 @@ export default function ChooseImage({
         return
       }
 
-      onAddImage(selectedImage)
+      await onAddImage(selectedImage)
 
       setSelectedImage(null)
 

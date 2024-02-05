@@ -181,6 +181,12 @@ export default function Page({ params }: PageParams) {
   async function onAddImage(fileUrl: string) {
     const image = await FabricImage.fromURL(fileUrl)
 
+    if (hovering && hovering instanceof FabricImage) {
+      await hovering.setSrc(fileUrl)
+
+      return
+    }
+
     selectedCanvas.add(image)
 
     selectedCanvas.sendObjectToBack(image)
@@ -311,17 +317,6 @@ export default function Page({ params }: PageParams) {
 
     setNumberOfPages([0])
   }, [orgs, canvas, template])
-
-  // useEffect(() => {
-  //   if (!isCreatePage && selectedElements.length > 0) {
-  //     for (const object of selectedElements) {
-  //       if (object instanceof FabricImage)
-  //         object.setSrc(
-  //           "https://images.unsplash.com/photo-1605146769289-440113cc3d00"
-  //         )
-  //     }
-  //   }
-  // }, [isCreatePage, selectedElements])
 
   useEffect(() => {
     function keyboard({ key }: KeyboardEvent) {
@@ -681,12 +676,21 @@ export default function Page({ params }: PageParams) {
                 <Button
                   sx={{
                     top:
-                      (hovering.aCoords.br.x - hovering.aCoords.tl.x) / 2 + 30,
+                      Object.values(hovering.aCoords)
+                        .map(({ y }) => y)
+                        .reduce((acc, curr) => acc + curr, 0) /
+                        4 -
+                      24,
                     left:
-                      (hovering.aCoords.tr.x - hovering.aCoords.tl.x) / 2 + 124,
+                      Object.values(hovering.aCoords)
+                        .map(({ x }) => x)
+                        .reduce((acc, curr) => acc + curr, 0) /
+                        4 -
+                      80,
                     zIndex: 2,
                     position: "absolute",
                   }}
+                  onClick={() => setChooseImageModal(true)}
                 >
                   Change photo
                 </Button>
