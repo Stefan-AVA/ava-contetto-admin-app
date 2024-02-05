@@ -15,6 +15,7 @@ import { LoadingButton } from "@mui/lab"
 import {
   Autocomplete,
   Avatar,
+  Box,
   Button,
   Container,
   Divider,
@@ -81,6 +82,7 @@ export default function Page({ params }: PageParams) {
   const [form, setForm] = useState(initialForm)
   const [style, setStyle] = useState(initialStyle)
   const [canvas, setCanvas] = useState<Canvas[]>([])
+  const [hovering, setHovering] = useState<FabricObject | null>(null)
   const [currCanvas, setCurrCanvas] = useState(0)
   const [numberOfPages, setNumberOfPages] = useState<number[]>([])
   const [chooseImageModal, setChooseImageModal] = useState(false)
@@ -337,6 +339,8 @@ export default function Page({ params }: PageParams) {
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
   if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs)) return <Loading />
+
+  console.log({ hovering })
 
   return (
     <Container
@@ -667,10 +671,41 @@ export default function Page({ params }: PageParams) {
             page={page}
             onCanvas={setCanvas}
             currCanvas={currCanvas}
+            onHovering={setHovering}
             onCurrCanvas={setCurrCanvas}
             onNumberOfPages={setNumberOfPages}
             onSelectedElements={setSelectedElements}
-          />
+          >
+            {currCanvas === page && hovering instanceof FabricImage && (
+              <>
+                <Button
+                  sx={{
+                    top:
+                      (hovering.aCoords.br.x - hovering.aCoords.tl.x) / 2 + 30,
+                    left:
+                      (hovering.aCoords.tr.x - hovering.aCoords.tl.x) / 2 + 124,
+                    zIndex: 2,
+                    position: "absolute",
+                  }}
+                >
+                  Change photo
+                </Button>
+
+                <Box
+                  sx={{
+                    top: hovering.top,
+                    left: hovering.left,
+                    width: hovering.aCoords.tr.x - hovering.aCoords.tl.x,
+                    height: hovering.aCoords.br.x - hovering.aCoords.tl.x,
+                    zIndex: 1,
+                    position: "absolute",
+                    pointerEvents: "none",
+                    backgroundColor: "rgba(255, 255, 255, .2)",
+                  }}
+                />
+              </>
+            )}
+          </FabricCanvas>
         ))}
       </Stack>
 
