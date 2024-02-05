@@ -15,7 +15,6 @@ import { LoadingButton } from "@mui/lab"
 import {
   Autocomplete,
   Avatar,
-  Box,
   Button,
   Container,
   Divider,
@@ -38,7 +37,6 @@ import {
   Textbox,
   type FabricObject,
 } from "fabric"
-import PDF from "jspdf"
 import { MuiColorInput } from "mui-color-input"
 import { useSnackbar } from "notistack"
 
@@ -46,6 +44,7 @@ import { TemplateType } from "@/types/template.types"
 import Loading from "@/components/loading"
 import { dmsans } from "@/styles/fonts"
 
+import ChooseImage from "./choose-image"
 import FabricCanvas from "./fabric-canvas"
 
 interface PageParams {
@@ -83,7 +82,8 @@ export default function Page({ params }: PageParams) {
   const [style, setStyle] = useState(initialStyle)
   const [canvas, setCanvas] = useState<Canvas[]>([])
   const [currCanvas, setCurrCanvas] = useState(0)
-  const [numberOfPages, setNumberOfPages] = useState(1)
+  const [numberOfPages, setNumberOfPages] = useState<number[]>([])
+  const [chooseImageModal, setChooseImageModal] = useState(false)
   const [selectedElements, setSelectedElements] = useState<FabricObject[]>([])
 
   const isCreatePage = params.templateId === "create"
@@ -112,11 +112,9 @@ export default function Page({ params }: PageParams) {
     useCreateTemplateMutation()
 
   async function onSubmit() {
-    const data = {} as Record<string, string>
+    const data = [] as string[]
 
-    canvas.forEach((curr, index) => {
-      data[index] = curr.toJSON()
-    })
+    canvas.forEach((curr) => data.push(curr.toJSON()))
 
     const fields = {
       data,
@@ -178,16 +176,8 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.bringObjectToFront(circle)
   }
 
-  async function onAddImage(files: FileList | null) {
-    if (!files || (files && files.length <= 0)) return
-
-    const file = files[0]
-
-    // Send image to backend to register.
-
-    const path = URL.createObjectURL(file)
-
-    const image = await FabricImage.fromURL(path)
+  async function onAddImage(fileUrl: string) {
+    const image = await FabricImage.fromURL(fileUrl)
 
     selectedCanvas.add(image)
 
@@ -215,6 +205,14 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.bringObjectToFront(rect)
   }
 
+  function onAddNewPage() {
+    setNumberOfPages((prev) => {
+      const lastElement = prev[prev.length - 1]
+
+      return [...prev, lastElement + 1]
+    })
+  }
+
   const onDeleteElement = useCallback(() => {
     for (const object of selectedCanvas.getActiveObjects())
       selectedCanvas.remove(object)
@@ -222,28 +220,6 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.discardActiveObject()
     selectedCanvas.renderAll()
   }, [selectedCanvas])
-
-  async function onExportToPDF() {
-    const pdf = new PDF("p", "mm", "a4")
-
-    canvas.forEach((curr, index) => {
-      if (index !== 0) pdf.addPage()
-
-      const dataURL = curr.toDataURL({
-        top: 0,
-        left: 0,
-        width: selectedCanvas.width,
-        height: selectedCanvas.height,
-        format: "png",
-        quality: 100,
-        multiplier: 1.0,
-      })
-
-      pdf.addImage(dataURL, "PNG", 10, 10, 190, 190)
-    })
-
-    pdf.save("template.pdf")
-  }
 
   function onUpdateStylesAndCurrentElements(
     key: keyof typeof initialStyle,
@@ -302,13 +278,13 @@ export default function Page({ params }: PageParams) {
           isPublic: template.isPublic,
         }))
 
-        const templates = template.data as Record<string, string>
+        const templates = template.data as string[]
 
-        const listTemplates = Object.entries(templates)
+        startTransition(() =>
+          setNumberOfPages(templates.map((_, index) => index))
+        )
 
-        startTransition(() => setNumberOfPages(listTemplates.length))
-
-        for await (const [key, value] of listTemplates) {
+        for await (const [key, value] of templates.entries()) {
           const selectedCanvas = canvas[Number(key)]
 
           await selectedCanvas.loadFromJSON(value)
@@ -327,7 +303,11 @@ export default function Page({ params }: PageParams) {
       }
 
       run()
+
+      return
     }
+
+    setNumberOfPages([0])
   }, [orgs, canvas, template])
 
   // useEffect(() => {
@@ -378,9 +358,7 @@ export default function Page({ params }: PageParams) {
           {isCreatePage ? "New Template" : "Edit Template"}
         </Typography>
 
-        <Button onClick={() => setNumberOfPages((prev) => prev + 1)}>
-          Add page
-        </Button>
+        {isCreatePage && <Button onClick={onAddNewPage}>Add page</Button>}
       </Stack>
 
       <link
@@ -504,24 +482,14 @@ export default function Page({ params }: PageParams) {
           Add text
         </Button>
 
-        <Box sx={{ position: "relative" }}>
-          <Box
-            sx={{
-              width: "100%",
-              height: "100%",
-              zIndex: 99,
-              opacity: 0,
-              position: "absolute",
-            }}
-            type="file"
-            onChange={({ target }) => onAddImage(target.files)}
-            component="input"
-          />
-
-          <Button sx={{ whiteSpace: "nowrap" }} size="small" variant="outlined">
-            Add Image
-          </Button>
-        </Box>
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          variant="outlined"
+          onClick={() => setChooseImageModal(true)}
+        >
+          Add Image
+        </Button>
 
         <Button
           sx={{ whiteSpace: "nowrap" }}
@@ -692,26 +660,33 @@ export default function Page({ params }: PageParams) {
         />
       </Stack>
 
-      <FabricCanvas
-        onCanvas={setCanvas}
-        currCanvas={currCanvas}
-        onCurrCanvas={setCurrCanvas}
-        numberOfPages={numberOfPages}
-        onSelectedElements={setSelectedElements}
-      />
-
-      <Stack
-        sx={{ mt: 8, gap: 2, justifyContent: "flex-end", flexDirection: "row" }}
-      >
-        <Button onClick={onExportToPDF}>Export to PDF</Button>
-
-        <LoadingButton
-          onClick={onSubmit}
-          loading={isLoadingCreateTemplate || isLoadingUpdateTemplate}
-        >
-          Save
-        </LoadingButton>
+      <Stack sx={{ gap: 2 }}>
+        {numberOfPages.map((page) => (
+          <FabricCanvas
+            key={page}
+            page={page}
+            onCanvas={setCanvas}
+            currCanvas={currCanvas}
+            onCurrCanvas={setCurrCanvas}
+            onNumberOfPages={setNumberOfPages}
+            onSelectedElements={setSelectedElements}
+          />
+        ))}
       </Stack>
+
+      <LoadingButton
+        sx={{ mt: 8, ml: "auto" }}
+        onClick={onSubmit}
+        loading={isLoadingCreateTemplate || isLoadingUpdateTemplate}
+      >
+        Save
+      </LoadingButton>
+
+      <ChooseImage
+        open={chooseImageModal}
+        onClose={() => setChooseImageModal(false)}
+        onAddImage={onAddImage}
+      />
     </Container>
   )
 }

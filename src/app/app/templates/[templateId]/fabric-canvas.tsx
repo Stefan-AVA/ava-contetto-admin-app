@@ -1,45 +1,37 @@
 "use client"
 
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  type Dispatch,
-  type SetStateAction,
-} from "react"
-import { Box, Stack, useMediaQuery } from "@mui/material"
+import { useEffect, useRef, type Dispatch, type SetStateAction } from "react"
+import { Box, useMediaQuery } from "@mui/material"
 import { useTheme } from "@mui/material/styles"
 import { Canvas, type CanvasOptions, type FabricObject } from "fabric"
+import { Trash } from "lucide-react"
 
 import useWindowSize from "@/hooks/use-window-size"
 
 interface FabricCanvasProps {
+  page: number
   onCanvas: Dispatch<SetStateAction<Canvas[]>>
   currCanvas: number
   onCurrCanvas: Dispatch<SetStateAction<number>>
-  numberOfPages: number
+  onNumberOfPages: Dispatch<SetStateAction<number[]>>
   onSelectedElements: Dispatch<SetStateAction<FabricObject[]>>
 }
 
 export default function FabricCanvas({
+  page,
   onCanvas,
   currCanvas,
   onCurrCanvas,
-  numberOfPages,
+  onNumberOfPages,
   onSelectedElements,
 }: FabricCanvasProps) {
-  const ref = useRef<HTMLCanvasElement[]>([])
+  const ref = useRef<HTMLCanvasElement>(null)
 
   const theme = useTheme()
 
   const { width } = useWindowSize()
 
   const matches = useMediaQuery(theme.breakpoints.up("lg"))
-
-  const pages = useMemo(
-    () => Array.from(Array(numberOfPages), (_, x) => x),
-    [numberOfPages]
-  )
 
   useEffect(() => {
     const options: Partial<CanvasOptions> = {
@@ -59,65 +51,79 @@ export default function FabricCanvas({
       })
     }
 
-    const createdCanvas = [] as Canvas[]
+    const currCanvas = new Canvas(ref.current!, options)
 
-    const refs = ref.current && ref.current.length > 0
+    currCanvas.backgroundColor = "#FFF"
+    currCanvas.preserveObjectStacking = true
 
-    if (refs) {
-      for (const page of pages) {
-        const currRef = ref.current?.[page] as HTMLCanvasElement
+    bindEvents(currCanvas)
 
-        const currCanvas = new Canvas(currRef, options)
+    onCanvas((prev) => {
+      const findCanvas = prev.find((_, index) => index === page)
 
-        currCanvas.backgroundColor = "#FFF"
-        currCanvas.preserveObjectStacking = true
+      if (findCanvas)
+        return prev.map((canvas, index) =>
+          index === page ? currCanvas : canvas
+        )
 
-        createdCanvas.push(currCanvas)
+      return [...prev, currCanvas]
+    })
 
-        bindEvents(currCanvas)
-      }
-
-      onCanvas((prev) => [...prev, ...createdCanvas])
-    }
     return () => {
-      for (const currCanvas of createdCanvas) currCanvas.dispose()
-
-      onCanvas([])
+      currCanvas.dispose()
 
       onSelectedElements([])
     }
-  }, [pages, width, matches, onCanvas, onSelectedElements])
+  }, [page, width, matches, onCanvas, onSelectedElements])
+
+  function onDeleteCanvas() {
+    onCanvas((prev) => prev.filter((_, index) => page !== index))
+
+    onNumberOfPages((prev) => prev.filter((_, index) => page !== index))
+
+    onSelectedElements([])
+  }
 
   return (
-    <Stack
+    <Box
       sx={{
-        gap: 2,
+        width: "fit-content",
+        position: "relative",
 
         ".canvas-container canvas": {
           border: "1px solid",
-          borderColor: "gray.300",
           borderRadius: ".5rem",
+          borderColor: currCanvas === page ? "secondary.main" : "gray.300",
         },
       }}
+      onClick={() => onCurrCanvas(page)}
     >
-      {pages.map((page) => (
+      <canvas id={`canvas-${page}`} ref={ref} />
+
+      {page > 0 && (
         <Box
           sx={{
-            ".canvas-container canvas": {
-              borderColor: currCanvas === page ? "secondary.main" : undefined,
+            py: 3,
+            px: 1,
+            top: "1rem",
+            color: "gray.700",
+            right: "-2rem",
+            cursor: "pointer",
+            bgcolor: "gray.100",
+            position: "absolute",
+            transition: "all .3s ease-in-out",
+            borderTopRightRadius: ".5rem",
+            borderBottomRightRadius: ".5rem",
+
+            ":hover": {
+              bgcolor: "gray.200",
             },
           }}
-          key={page}
-          onClick={() => onCurrCanvas(page)}
+          onClick={onDeleteCanvas}
         >
-          <canvas
-            id={`canvas-${page}`}
-            ref={(curr) => {
-              if (ref.current) ref.current[page] = curr as HTMLCanvasElement
-            }}
-          />
+          <Trash size={16} />
         </Box>
-      ))}
-    </Stack>
+      )}
+    </Box>
   )
 }
