@@ -1,6 +1,12 @@
 "use client"
 
-import { useEffect, useRef, type Dispatch, type SetStateAction } from "react"
+import {
+  useEffect,
+  useRef,
+  type Dispatch,
+  type PropsWithChildren,
+  type SetStateAction,
+} from "react"
 import { Box, useMediaQuery } from "@mui/material"
 import { useTheme } from "@mui/material/styles"
 import { Canvas, type CanvasOptions, type FabricObject } from "fabric"
@@ -12,6 +18,7 @@ interface FabricCanvasProps {
   page: number
   onCanvas: Dispatch<SetStateAction<Canvas[]>>
   currCanvas: number
+  onHovering: Dispatch<SetStateAction<FabricObject | null>>
   onCurrCanvas: Dispatch<SetStateAction<number>>
   onNumberOfPages: Dispatch<SetStateAction<number[]>>
   onSelectedElements: Dispatch<SetStateAction<FabricObject[]>>
@@ -19,12 +26,14 @@ interface FabricCanvasProps {
 
 export default function FabricCanvas({
   page,
+  children,
   onCanvas,
   currCanvas,
+  onHovering,
   onCurrCanvas,
   onNumberOfPages,
   onSelectedElements,
-}: FabricCanvasProps) {
+}: PropsWithChildren<FabricCanvasProps>) {
   const ref = useRef<HTMLCanvasElement>(null)
 
   const theme = useTheme()
@@ -40,6 +49,8 @@ export default function FabricCanvas({
     }
 
     const bindEvents = (canvas: Canvas) => {
+      canvas.on("mouse:down", () => onHovering(null))
+      canvas.on("mouse:over", (e) => onHovering(e.target ?? null))
       canvas.on("selection:cleared", () => {
         onSelectedElements([])
       })
@@ -74,7 +85,7 @@ export default function FabricCanvas({
 
       onSelectedElements([])
     }
-  }, [page, width, matches, onCanvas, onSelectedElements])
+  }, [page, width, matches, onHovering, onCanvas, onSelectedElements])
 
   function onDeleteCanvas() {
     onCanvas((prev) => prev.filter((_, index) => page !== index))
@@ -124,6 +135,8 @@ export default function FabricCanvas({
           <Trash size={16} />
         </Box>
       )}
+
+      {children}
     </Box>
   )
 }

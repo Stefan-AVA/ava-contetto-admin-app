@@ -15,6 +15,7 @@ import { LoadingButton } from "@mui/lab"
 import {
   Autocomplete,
   Avatar,
+  Box,
   Button,
   Container,
   Divider,
@@ -81,6 +82,7 @@ export default function Page({ params }: PageParams) {
   const [form, setForm] = useState(initialForm)
   const [style, setStyle] = useState(initialStyle)
   const [canvas, setCanvas] = useState<Canvas[]>([])
+  const [hovering, setHovering] = useState<FabricObject | null>(null)
   const [currCanvas, setCurrCanvas] = useState(0)
   const [numberOfPages, setNumberOfPages] = useState<number[]>([])
   const [chooseImageModal, setChooseImageModal] = useState(false)
@@ -178,6 +180,12 @@ export default function Page({ params }: PageParams) {
 
   async function onAddImage(fileUrl: string) {
     const image = await FabricImage.fromURL(fileUrl)
+
+    if (hovering && hovering instanceof FabricImage) {
+      await hovering.setSrc(fileUrl)
+
+      return
+    }
 
     selectedCanvas.add(image)
 
@@ -310,17 +318,6 @@ export default function Page({ params }: PageParams) {
     setNumberOfPages([0])
   }, [orgs, canvas, template])
 
-  // useEffect(() => {
-  //   if (!isCreatePage && selectedElements.length > 0) {
-  //     for (const object of selectedElements) {
-  //       if (object instanceof FabricImage)
-  //         object.setSrc(
-  //           "https://images.unsplash.com/photo-1605146769289-440113cc3d00"
-  //         )
-  //     }
-  //   }
-  // }, [isCreatePage, selectedElements])
-
   useEffect(() => {
     function keyboard({ key }: KeyboardEvent) {
       if (key === "Escape") selectedCanvas.discardActiveObject()
@@ -337,6 +334,8 @@ export default function Page({ params }: PageParams) {
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
   if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs)) return <Loading />
+
+  console.log({ hovering })
 
   return (
     <Container
@@ -667,10 +666,50 @@ export default function Page({ params }: PageParams) {
             page={page}
             onCanvas={setCanvas}
             currCanvas={currCanvas}
+            onHovering={setHovering}
             onCurrCanvas={setCurrCanvas}
             onNumberOfPages={setNumberOfPages}
             onSelectedElements={setSelectedElements}
-          />
+          >
+            {currCanvas === page && hovering instanceof FabricImage && (
+              <>
+                <Button
+                  sx={{
+                    top:
+                      Object.values(hovering.aCoords)
+                        .map(({ y }) => y)
+                        .reduce((acc, curr) => acc + curr, 0) /
+                        4 -
+                      24,
+                    left:
+                      Object.values(hovering.aCoords)
+                        .map(({ x }) => x)
+                        .reduce((acc, curr) => acc + curr, 0) /
+                        4 -
+                      80,
+                    zIndex: 2,
+                    position: "absolute",
+                  }}
+                  onClick={() => setChooseImageModal(true)}
+                >
+                  Change photo
+                </Button>
+
+                <Box
+                  sx={{
+                    top: hovering.top,
+                    left: hovering.left,
+                    width: hovering.aCoords.tr.x - hovering.aCoords.tl.x,
+                    height: hovering.aCoords.br.x - hovering.aCoords.tl.x,
+                    zIndex: 1,
+                    position: "absolute",
+                    pointerEvents: "none",
+                    backgroundColor: "rgba(255, 255, 255, .2)",
+                  }}
+                />
+              </>
+            )}
+          </FabricCanvas>
         ))}
       </Stack>
 
