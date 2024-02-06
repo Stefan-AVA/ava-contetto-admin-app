@@ -15,7 +15,7 @@ export const templateApi = createApi({
   endpoints: (builder) => ({
     createTemplate: builder.mutation<
       ITemplate,
-      Omit<ITemplate, "_id" | "createdAt" | "updatedAt">
+      Omit<ITemplate, "_id" | "createdAt" | "updatedAt" | "layout">
     >({
       query: (data) => ({
         url: "",
@@ -40,7 +40,7 @@ export const templateApi = createApi({
     }),
     updateTemplate: builder.mutation<
       ITemplate,
-      Omit<ITemplate, "createdAt" | "updatedAt">
+      Omit<ITemplate, "createdAt" | "updatedAt" | "layout">
     >({
       query: ({ _id, ...rest }) => ({
         url: `/${_id}`,

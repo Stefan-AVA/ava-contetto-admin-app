@@ -1,3 +1,10 @@
+export interface ITemplateLayout {
+  _id: string
+  name: string
+  width: number
+  height: number
+}
+
 export enum TemplateType {
   brochure = "brochure",
   social = "social",
@@ -11,6 +18,8 @@ export interface ITemplate {
   price: number // 0 for free, price unit usd
   type: TemplateType
   data: any
+  layoutId: string
+  layout: ITemplateLayout
   createdAt: number
   updatedAt: number
 }

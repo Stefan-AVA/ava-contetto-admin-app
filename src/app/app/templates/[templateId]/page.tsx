@@ -8,6 +8,7 @@ import {
   useGetTemplateQuery,
   useUpdateTemplateMutation,
 } from "@/redux/apis/template"
+import { useGetTemplateLayoutsQuery } from "@/redux/apis/templateLayout"
 import { parseError } from "@/utils/error"
 import { nameInitials } from "@/utils/format-name"
 import masks from "@/utils/masks"
@@ -76,6 +77,7 @@ const initialForm = {
   price: "",
   orgIds: [] as Option[],
   isPublic: false,
+  layoutId: "",
 }
 
 export default function Page({ params }: PageParams) {
@@ -106,6 +108,9 @@ export default function Page({ params }: PageParams) {
   )
 
   const { data: orgs, isLoading: isLoadingOrgs } = useGetOrgsQuery()
+
+  const { data: layouts, isLoading: isLoadingLayout } =
+    useGetTemplateLayoutsQuery()
 
   const [updateTemplate, { isLoading: isLoadingUpdateTemplate }] =
     useUpdateTemplateMutation()
@@ -333,7 +338,8 @@ export default function Page({ params }: PageParams) {
     }
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
-  if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs)) return <Loading />
+  if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs || isLoadingLayout))
+    return <Loading />
 
   console.log({ hovering })
 
