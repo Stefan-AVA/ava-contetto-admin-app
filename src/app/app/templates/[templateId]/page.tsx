@@ -76,6 +76,7 @@ const initialForm = {
   type: "" as TemplateType,
   price: "",
   orgIds: [] as Option[],
+  layout: "",
   isPublic: false,
   layoutId: "",
 }
@@ -147,6 +148,26 @@ export default function Page({ params }: PageParams) {
       .catch((error) =>
         enqueueSnackbar(parseError(error), { variant: "error" })
       )
+  }
+
+  function onResizeCanvasWithSelectedLayout(layoutId: string) {
+    const findLayout = layouts?.find(({ _id }) => _id === layoutId)
+
+    if (findLayout) {
+      canvas.forEach((object) => {
+        object.setDimensions({
+          width: findLayout.width,
+          height: findLayout.height,
+        })
+
+        object.renderAll()
+      })
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      layout: layoutId,
+    }))
   }
 
   function onClearAll() {
@@ -341,8 +362,6 @@ export default function Page({ params }: PageParams) {
   if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs || isLoadingLayout))
     return <Loading />
 
-  console.log({ hovering })
-
   return (
     <Container
       sx={{
@@ -461,6 +480,22 @@ export default function Page({ params }: PageParams) {
             handleHomeEndKeys
           />
         )}
+
+        <TextField
+          label="Layout"
+          value={form.layout}
+          select
+          onChange={({ target }) =>
+            onResizeCanvasWithSelectedLayout(target.value)
+          }
+          fullWidth
+        >
+          {layouts?.map(({ _id, name }) => (
+            <MenuItem key={_id} value={_id}>
+              {name}
+            </MenuItem>
+          ))}
+        </TextField>
       </Stack>
 
       <Divider />
