@@ -76,7 +76,6 @@ const initialForm = {
   type: "" as TemplateType,
   price: "",
   orgIds: [] as Option[],
-  layout: "",
   isPublic: false,
   layoutId: "",
 }
@@ -122,7 +121,7 @@ export default function Page({ params }: PageParams) {
   async function onSubmit() {
     const data = [] as string[]
 
-    canvas.forEach((curr) => data.push(curr.toJSON()))
+    canvas.forEach((curr) => data.push(curr.toDatalessJSON(["id"])))
 
     const fields = {
       data,
@@ -166,7 +165,7 @@ export default function Page({ params }: PageParams) {
 
     setForm((prev) => ({
       ...prev,
-      layout: layoutId,
+      layoutId,
     }))
   }
 
@@ -178,8 +177,9 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.renderAll()
   }
 
-  function onAddText() {
-    const text = new Textbox("Hello world", {
+  function onAddText(type: "body" | "title") {
+    const text = new Textbox(type === "title" ? "Title text" : "Body text", {
+      id: type,
       fontSize: style.fontSize,
       fontWeight: style.fontWeight,
       lineHeight: style.lineHeight / 16,
@@ -191,6 +191,8 @@ export default function Page({ params }: PageParams) {
 
     selectedCanvas.bringObjectToFront(text)
   }
+
+  console.log({ selectedElements })
 
   function onAddCircle() {
     const circle = new Circle({
@@ -309,6 +311,7 @@ export default function Page({ params }: PageParams) {
           type: template.type,
           price: masks.transformToCurrency(template.price),
           orgIds: orgs.filter(({ _id }) => template.orgIds.includes(_id)),
+          layoutId: template.layoutId,
           isPublic: template.isPublic,
         }))
 
@@ -483,7 +486,7 @@ export default function Page({ params }: PageParams) {
 
         <TextField
           label="Layout"
-          value={form.layout}
+          value={form.layoutId}
           select
           onChange={({ target }) =>
             onResizeCanvasWithSelectedLayout(target.value)
@@ -516,10 +519,19 @@ export default function Page({ params }: PageParams) {
         <Button
           sx={{ whiteSpace: "nowrap" }}
           size="small"
-          onClick={onAddText}
+          onClick={() => onAddText("title")}
           variant="outlined"
         >
-          Add text
+          Add title
+        </Button>
+
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={() => onAddText("body")}
+          variant="outlined"
+        >
+          Add body
         </Button>
 
         <Button
