@@ -23,11 +23,11 @@ export const palette = {
   blue: {
     300: "#A1A5C1",
     500: "#6A81AE",
-    800: "#303F65",
+    800: "#002345",
   },
 
   cyan: {
-    500: "#00B8D2",
+    500: "#09B8F9",
     600: "#04A7BE",
   },
 
@@ -331,7 +331,7 @@ export const components = (
 
               "&-active": {
                 color: colors.white,
-                backgroundColor: colors.pink[500],
+                backgroundColor: colors.cyan[500],
               },
 
               "&:last-of-type": {
@@ -443,7 +443,7 @@ const theme = createTheme({
   palette: {
     ...palette,
     primary: colorMapper({ main: palette.blue[800] }),
-    secondary: colorMapper({ main: palette.pink[500] }),
+    secondary: colorMapper({ main: palette.cyan[500] }),
   },
   typography,
   components: components(palette),

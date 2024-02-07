@@ -8,7 +8,7 @@ import { useLoginMutation } from "@/redux/apis/auth"
 import { formatErrorZodMessage, parseError } from "@/utils/error"
 import { LoadingButton } from "@mui/lab"
 import { Box, Stack, TextField, Typography } from "@mui/material"
-import Logo from "~/assets/logo-ava.png"
+import ContettoLogo from "~/assets/logo.png"
 import Background from "~/assets/signup-background.jpg"
 import { z } from "zod"
 
@@ -138,8 +138,8 @@ export default function Auth({ searchParams }: PageProps) {
         }}
       >
         <Box
-          sx={{ mb: 5, height: "3rem", objectFit: "contain" }}
-          src={Logo}
+          sx={{ mb: 5, height: "2rem", objectFit: "contain" }}
+          src={ContettoLogo}
           alt="Logo Ava"
           component={Image}
         />
