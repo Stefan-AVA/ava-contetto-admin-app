@@ -109,7 +109,7 @@ export default function Page({ params }: PageParams) {
 
   const { data: orgs, isLoading: isLoadingOrgs } = useGetOrgsQuery()
 
-  const { data: layouts, isLoading: isLoadingLayout } =
+  const { data: layouts, isLoading: isLoadingLayouts } =
     useGetTemplateLayoutsQuery()
 
   const [updateTemplate, { isLoading: isLoadingUpdateTemplate }] =
@@ -121,7 +121,7 @@ export default function Page({ params }: PageParams) {
   async function onSubmit() {
     const data = [] as string[]
 
-    canvas.forEach((curr) => data.push(curr.toJSON()))
+    canvas.forEach((curr) => data.push(curr.toDatalessJSON(["id"])))
 
     const fields = {
       data,
@@ -149,6 +149,26 @@ export default function Page({ params }: PageParams) {
       )
   }
 
+  function onResizeCanvasWithSelectedLayout(layoutId: string) {
+    const findLayout = layouts?.find(({ _id }) => _id === layoutId)
+
+    if (findLayout) {
+      canvas.forEach((object) => {
+        object.setDimensions({
+          width: findLayout.width,
+          height: findLayout.height,
+        })
+
+        object.renderAll()
+      })
+    }
+
+    setForm((prev) => ({
+      ...prev,
+      layoutId,
+    }))
+  }
+
   function onClearAll() {
     for (const object of selectedCanvas.getObjects())
       selectedCanvas.remove(object)
@@ -157,8 +177,9 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.renderAll()
   }
 
-  function onAddText() {
-    const text = new Textbox("Hello world", {
+  function onAddText(type: "body" | "title") {
+    const text = new Textbox(type === "title" ? "Title text" : "Body text", {
+      id: type,
       fontSize: style.fontSize,
       fontWeight: style.fontWeight,
       lineHeight: style.lineHeight / 16,
@@ -183,8 +204,27 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.bringObjectToFront(circle)
   }
 
+  async function onAddLogo() {
+    const path = "assets/empty-image.jpeg"
+
+    const host =
+      process.env.NODE_ENV === "development"
+        ? `http://${window.location.hostname}:${window.location.port}/${path}`
+        : `${window.location.protocol}//${window.location.hostname}/${path}`
+
+    const image = await FabricImage.fromURL(host, undefined, {
+      id: "logo",
+    })
+
+    selectedCanvas.add(image)
+
+    selectedCanvas.sendObjectToBack(image)
+  }
+
   async function onAddImage(fileUrl: string) {
-    const image = await FabricImage.fromURL(fileUrl)
+    const image = await FabricImage.fromURL(fileUrl, undefined, {
+      id: "image",
+    })
 
     if (hovering && hovering instanceof FabricImage) {
       await hovering.setSrc(fileUrl)
@@ -288,6 +328,7 @@ export default function Page({ params }: PageParams) {
           type: template.type,
           price: masks.transformToCurrency(template.price),
           orgIds: orgs.filter(({ _id }) => template.orgIds.includes(_id)),
+          layoutId: template.layoutId,
           isPublic: template.isPublic,
         }))
 
@@ -299,6 +340,10 @@ export default function Page({ params }: PageParams) {
 
         for await (const [key, value] of templates.entries()) {
           const selectedCanvas = canvas[Number(key)]
+
+          const ctx = selectedCanvas.contextTop
+
+          if (!ctx) return
 
           await selectedCanvas.loadFromJSON(value)
 
@@ -338,10 +383,7 @@ export default function Page({ params }: PageParams) {
     }
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
-  if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs || isLoadingLayout))
-    return <Loading />
-
-  console.log({ hovering })
+  if (isLoadingTemplate || isLoadingOrgs || isLoadingLayouts) return <Loading />
 
   return (
     <Container
@@ -461,6 +503,24 @@ export default function Page({ params }: PageParams) {
             handleHomeEndKeys
           />
         )}
+
+        {layouts && (
+          <TextField
+            label="Layout"
+            value={form.layoutId}
+            select
+            onChange={({ target }) =>
+              onResizeCanvasWithSelectedLayout(target.value)
+            }
+            fullWidth
+          >
+            {layouts.map(({ _id, name }) => (
+              <MenuItem key={_id} value={_id}>
+                {name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
       </Stack>
 
       <Divider />
@@ -481,10 +541,28 @@ export default function Page({ params }: PageParams) {
         <Button
           sx={{ whiteSpace: "nowrap" }}
           size="small"
-          onClick={onAddText}
+          onClick={() => onAddText("title")}
           variant="outlined"
         >
-          Add text
+          Add title
+        </Button>
+
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          onClick={() => onAddText("body")}
+          variant="outlined"
+        >
+          Add body
+        </Button>
+
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          variant="outlined"
+          onClick={onAddLogo}
+        >
+          Add Logo
         </Button>
 
         <Button
