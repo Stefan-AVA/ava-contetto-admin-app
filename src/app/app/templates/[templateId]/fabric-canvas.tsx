@@ -24,6 +24,10 @@ interface FabricCanvasProps {
   onSelectedElements: Dispatch<SetStateAction<FabricObject[]>>
 }
 
+type CustomFabricObject = FabricObject & {
+  id: string
+}
+
 export default function FabricCanvas({
   page,
   children,
@@ -50,7 +54,10 @@ export default function FabricCanvas({
 
     const bindEvents = (canvas: Canvas) => {
       canvas.on("mouse:down", () => onHovering(null))
-      canvas.on("mouse:over", (e) => onHovering(e.target ?? null))
+      canvas.on("mouse:over", (e) => {
+        if ((e.target as CustomFabricObject)?.id === "image")
+          onHovering(e.target ?? null)
+      })
       canvas.on("selection:cleared", () => {
         onSelectedElements([])
       })

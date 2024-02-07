@@ -109,7 +109,7 @@ export default function Page({ params }: PageParams) {
 
   const { data: orgs, isLoading: isLoadingOrgs } = useGetOrgsQuery()
 
-  const { data: layouts, isLoading: isLoadingLayout } =
+  const { data: layouts, isLoading: isLoadingLayouts } =
     useGetTemplateLayoutsQuery()
 
   const [updateTemplate, { isLoading: isLoadingUpdateTemplate }] =
@@ -192,8 +192,6 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.bringObjectToFront(text)
   }
 
-  console.log({ selectedElements })
-
   function onAddCircle() {
     const circle = new Circle({
       fill: style.backgroundColor,
@@ -206,8 +204,27 @@ export default function Page({ params }: PageParams) {
     selectedCanvas.bringObjectToFront(circle)
   }
 
+  async function onAddLogo() {
+    const path = "assets/empty-image.jpeg"
+
+    const host =
+      process.env.NODE_ENV === "development"
+        ? `http://${window.location.hostname}:${window.location.port}/${path}`
+        : `${window.location.protocol}//${window.location.hostname}/${path}`
+
+    const image = await FabricImage.fromURL(host, undefined, {
+      id: "logo",
+    })
+
+    selectedCanvas.add(image)
+
+    selectedCanvas.sendObjectToBack(image)
+  }
+
   async function onAddImage(fileUrl: string) {
-    const image = await FabricImage.fromURL(fileUrl)
+    const image = await FabricImage.fromURL(fileUrl, undefined, {
+      id: "image",
+    })
 
     if (hovering && hovering instanceof FabricImage) {
       await hovering.setSrc(fileUrl)
@@ -324,6 +341,10 @@ export default function Page({ params }: PageParams) {
         for await (const [key, value] of templates.entries()) {
           const selectedCanvas = canvas[Number(key)]
 
+          const ctx = selectedCanvas.contextTop
+
+          if (!ctx) return
+
           await selectedCanvas.loadFromJSON(value)
 
           selectedCanvas.selection = false
@@ -362,8 +383,7 @@ export default function Page({ params }: PageParams) {
     }
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
-  if (!isCreatePage && (isLoadingTemplate || isLoadingOrgs || isLoadingLayout))
-    return <Loading />
+  if (isLoadingTemplate || isLoadingOrgs || isLoadingLayouts) return <Loading />
 
   return (
     <Container
@@ -484,21 +504,23 @@ export default function Page({ params }: PageParams) {
           />
         )}
 
-        <TextField
-          label="Layout"
-          value={form.layoutId}
-          select
-          onChange={({ target }) =>
-            onResizeCanvasWithSelectedLayout(target.value)
-          }
-          fullWidth
-        >
-          {layouts?.map(({ _id, name }) => (
-            <MenuItem key={_id} value={_id}>
-              {name}
-            </MenuItem>
-          ))}
-        </TextField>
+        {layouts && (
+          <TextField
+            label="Layout"
+            value={form.layoutId}
+            select
+            onChange={({ target }) =>
+              onResizeCanvasWithSelectedLayout(target.value)
+            }
+            fullWidth
+          >
+            {layouts.map(({ _id, name }) => (
+              <MenuItem key={_id} value={_id}>
+                {name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
       </Stack>
 
       <Divider />
@@ -532,6 +554,15 @@ export default function Page({ params }: PageParams) {
           variant="outlined"
         >
           Add body
+        </Button>
+
+        <Button
+          sx={{ whiteSpace: "nowrap" }}
+          size="small"
+          variant="outlined"
+          onClick={onAddLogo}
+        >
+          Add Logo
         </Button>
 
         <Button
