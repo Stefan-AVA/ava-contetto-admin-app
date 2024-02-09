@@ -228,6 +228,7 @@ export default function Page({ params }: PageParams) {
 
     if (hovering && hovering instanceof FabricImage) {
       await hovering.setSrc(fileUrl)
+      selectedCanvas.renderAll()
 
       return
     }

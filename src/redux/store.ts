@@ -7,6 +7,7 @@ import {
 } from "react-redux"
 
 import { authApi } from "./apis/auth"
+import { industryApi } from "./apis/industry"
 import { orgApi } from "./apis/org"
 import { templateApi } from "./apis/template"
 import { templateImageApi } from "./apis/templateImage"
@@ -21,6 +22,7 @@ export const store = configureStore({
     [templateApi.reducerPath]: templateApi.reducer,
     [templateImageApi.reducerPath]: templateImageApi.reducer,
     [templateLayoutApi.reducerPath]: templateLayoutApi.reducer,
+    [industryApi.reducerPath]: industryApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(
@@ -28,7 +30,8 @@ export const store = configureStore({
       orgApi.middleware,
       templateApi.middleware,
       templateImageApi.middleware,
-      templateLayoutApi.middleware
+      templateLayoutApi.middleware,
+      industryApi.middleware
     ),
 })
 
