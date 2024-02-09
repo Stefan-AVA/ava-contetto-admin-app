@@ -1,3 +1,5 @@
+import { IIndustry } from "./industry.types"
+
 export interface ITemplateLayout {
   _id: string
   name: string
@@ -20,6 +22,8 @@ export interface ITemplate {
   data: any
   layoutId: string
   layout: ITemplateLayout
+  industryIds: string[]
+  industries?: IIndustry[]
   createdAt: number
   updatedAt: number
 }

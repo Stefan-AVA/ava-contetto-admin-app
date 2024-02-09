@@ -2,6 +2,7 @@
 
 import { startTransition, useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useGetIndustriesQuery } from "@/redux/apis/industry"
 import { useGetOrgsQuery } from "@/redux/apis/org"
 import {
   useCreateTemplateMutation,
@@ -78,6 +79,7 @@ const initialForm = {
   orgIds: [] as Option[],
   isPublic: false,
   layoutId: "",
+  industryIds: [] as string[],
 }
 
 export default function Page({ params }: PageParams) {
@@ -111,6 +113,8 @@ export default function Page({ params }: PageParams) {
 
   const { data: layouts, isLoading: isLoadingLayouts } =
     useGetTemplateLayoutsQuery()
+  const { data: industries = [], isLoading: isLoadingIndustries } =
+    useGetIndustriesQuery()
 
   const [updateTemplate, { isLoading: isLoadingUpdateTemplate }] =
     useUpdateTemplateMutation()
@@ -331,6 +335,7 @@ export default function Page({ params }: PageParams) {
           orgIds: orgs.filter(({ _id }) => template.orgIds.includes(_id)),
           layoutId: template.layoutId,
           isPublic: template.isPublic,
+          industryIds: template.industryIds || [],
         }))
 
         const templates = template.data as string[]
@@ -384,7 +389,13 @@ export default function Page({ params }: PageParams) {
     }
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
-  if (isLoadingTemplate || isLoadingOrgs || isLoadingLayouts) return <Loading />
+  if (
+    isLoadingTemplate ||
+    isLoadingOrgs ||
+    isLoadingLayouts ||
+    isLoadingIndustries
+  )
+    return <Loading />
 
   return (
     <Container
@@ -524,6 +535,46 @@ export default function Page({ params }: PageParams) {
         )}
       </Stack>
 
+      <Stack sx={{ mt: 2, mb: 4, gap: 3, flexDirection: "row" }}>
+        <Autocomplete
+          value={industries.filter((industry) =>
+            form.industryIds.includes(industry._id)
+          )}
+          options={industries ?? []}
+          onChange={(_, newValue) =>
+            setForm((prev) => ({
+              ...prev,
+              industryIds: newValue.map((industry) => industry._id),
+            }))
+          }
+          multiple
+          fullWidth
+          clearOnBlur
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Search Industry"
+              InputProps={{
+                ...params.InputProps,
+                endAdornment: (
+                  <InputAdornment position="end">
+                    {params.InputProps.endAdornment}
+                  </InputAdornment>
+                ),
+              }}
+            />
+          )}
+          renderOption={({ key, ...props }: any, option) => (
+            <ListItem key={option._id} {...props}>
+              <ListItemText>{option.name}</ListItemText>
+            </ListItem>
+          )}
+          noOptionsText="No Industry"
+          selectOnFocus
+          getOptionLabel={(option) => option.name}
+          handleHomeEndKeys
+        />
+      </Stack>
       <Divider />
 
       <Stack

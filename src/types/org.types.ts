@@ -1,3 +1,5 @@
+import { IIndustry } from "./industry.types"
+
 export enum MLSSource {
   crea = "crea",
   kvcore = "kvcore",
@@ -23,6 +25,8 @@ export interface IOrg {
   owner: string // username
   logoUrl?: string
   mlsFeeds?: IMLSFeed[]
+  industryId: string
+  industry?: IIndustry
   deleted: boolean
   deletedAt?: number
   whiteLabel?: DefaultAvaOrgTheme
