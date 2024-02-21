@@ -342,15 +342,6 @@ export default function Page({ params }: PageParams) {
 
           await selectedCanvas.loadFromJSON(value)
 
-          selectedCanvas.selection = false
-
-          selectedCanvas.forEachObject((object) => {
-            object.hasControls = false
-            object.lockRotation = true
-            object.lockMovementX = true
-            object.lockMovementY = true
-          })
-
           selectedCanvas.renderAll()
         }
       }
