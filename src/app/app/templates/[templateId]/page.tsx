@@ -68,7 +68,6 @@ const initialStyle = {
   lineHeight: 24,
   fontWeight: "400",
   fontFamily: dmsans.style.fontFamily,
-  borderColor: "#000",
   backgroundColor: "#000",
 }
 
@@ -199,7 +198,6 @@ export default function Page({ params }: PageParams) {
   function onAddCircle() {
     const circle = new Circle({
       fill: style.backgroundColor,
-      stroke: style.borderColor,
       radius: 20,
     })
 
@@ -254,7 +252,6 @@ export default function Page({ params }: PageParams) {
     const rect = new Rect({
       fill: style.backgroundColor,
       width: 40,
-      stroke: style.borderColor,
       height: 40,
     })
 
@@ -289,8 +286,6 @@ export default function Page({ params }: PageParams) {
       for (const object of selectedElements) {
         if (object.type !== "textbox") {
           if (key === "backgroundColor") object.set({ fill: value })
-
-          if (key === "borderColor") object.set({ stroke: value })
         }
 
         if (
@@ -352,15 +347,6 @@ export default function Page({ params }: PageParams) {
           if (!ctx) return
 
           await selectedCanvas.loadFromJSON(value)
-
-          selectedCanvas.selection = false
-
-          selectedCanvas.forEachObject((object) => {
-            object.hasControls = false
-            object.lockRotation = true
-            object.lockMovementX = true
-            object.lockMovementY = true
-          })
 
           selectedCanvas.renderAll()
         }
@@ -782,15 +768,6 @@ export default function Page({ params }: PageParams) {
           format="hex"
           onChange={(value) =>
             onUpdateStylesAndCurrentElements("backgroundColor", value)
-          }
-        />
-
-        <MuiColorInput
-          value={style.borderColor}
-          label="Border Color"
-          format="hex"
-          onChange={(value) =>
-            onUpdateStylesAndCurrentElements("borderColor", value)
           }
         />
       </Stack>
