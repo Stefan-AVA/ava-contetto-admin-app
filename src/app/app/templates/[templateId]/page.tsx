@@ -1,6 +1,12 @@
 "use client"
 
-import { startTransition, useCallback, useEffect, useState } from "react"
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react"
 import { useRouter } from "next/navigation"
 import { useGetIndustriesQuery } from "@/redux/apis/industry"
 import { useGetOrgsQuery } from "@/redux/apis/org"
@@ -110,7 +116,7 @@ export default function Page({ params }: PageParams) {
 
   const { data: orgs, isLoading: isLoadingOrgs } = useGetOrgsQuery()
 
-  const { data: layouts, isLoading: isLoadingLayouts } =
+  const { data: layouts = [], isLoading: isLoadingLayouts } =
     useGetTemplateLayoutsQuery()
   const { data: industries = [], isLoading: isLoadingIndustries } =
     useGetIndustriesQuery()
@@ -375,6 +381,11 @@ export default function Page({ params }: PageParams) {
     }
   }, [selectedCanvas, onDeleteElement, selectedElements])
 
+  const filteredLayouts = useMemo(
+    () => layouts.filter((layout) => layout.type === form.type),
+    [layouts, form.type]
+  )
+
   if (
     isLoadingTemplate ||
     isLoadingOrgs ||
@@ -439,7 +450,11 @@ export default function Page({ params }: PageParams) {
           value={form.type}
           select
           onChange={({ target }) =>
-            setForm((prev) => ({ ...prev, type: target.value as TemplateType }))
+            setForm((prev) => ({
+              ...prev,
+              type: target.value as TemplateType,
+              layoutId: "",
+            }))
           }
           fullWidth
         >
@@ -502,7 +517,7 @@ export default function Page({ params }: PageParams) {
           />
         )}
 
-        {layouts && (
+        {filteredLayouts && (
           <TextField
             label="Layout"
             value={form.layoutId}
@@ -512,7 +527,7 @@ export default function Page({ params }: PageParams) {
             }
             fullWidth
           >
-            {layouts.map(({ _id, name }) => (
+            {filteredLayouts.map(({ _id, name }) => (
               <MenuItem key={_id} value={_id}>
                 {name}
               </MenuItem>

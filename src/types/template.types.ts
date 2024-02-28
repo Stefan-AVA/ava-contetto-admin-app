@@ -1,17 +1,19 @@
 import { IIndustry } from "./industry.types"
 
-export interface ITemplateLayout {
-  _id: string
-  name: string
-  width: number
-  height: number
-}
-
 export enum TemplateType {
   brochure = "brochure",
   social = "social",
   ads = "ads",
 }
+
+export interface ITemplateLayout {
+  _id: string
+  name: string
+  width: number
+  height: number
+  type: TemplateType
+}
+
 export interface ITemplate {
   _id: string
   name: string
